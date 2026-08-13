@@ -1,0 +1,29 @@
+llm-guard-playground/
+│
+├── backend/
+│   ├── main.py              # FastAPI + static serving
+│   ├── scanner_registry.py  # All 36 scanners: metadata, params, heavy flag
+│   ├── scan_engine.py       # Instantiate scanners, run scan_prompt/scan_output
+│   └── models.py            # Pydantic schemas
+│
+├── frontend/
+│   └── index.html           # Full UI, self-contained (HTML + CSS + JS)
+│
+├── setup_env.ps1            # One-time setup
+├── run.ps1                  # Daily runner
+└── README.md
+
+
+
+User types message → clicks "Analyze"
+        ↓
+POST /scan  { message, input_scanners: [...], output_scanners: [...], strict_mode: bool }
+        ↓
+scan_engine.py
+  → instantiate selected input scanners with their configs
+  → run scan_prompt(message, scanners)
+  → collect per-scanner: is_valid, risk_score, sanitized_text
+  → (output scanners run on sanitized_text as if it were LLM output)
+        ↓
+Response JSON → right panel renders full report
+              → chat bubble gets 🟢/🟡/🔴 status badge

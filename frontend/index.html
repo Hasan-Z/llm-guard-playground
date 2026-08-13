@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>LLM-Guard Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ── THEME TOKENS ──────────────────────────────────────────────────────────── */
+:root {
+  --radius:  10px;
+  --radius-sm: 6px;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Syne', sans-serif;
+  --accent:  #0099cc;
+  --accent-light: #00b8f0;
+  --green:   #16a34a;
+  --green-l: #22c55e;
+  --yellow:  #d97706;
+  --yellow-l:#f59e0b;
+  --red:     #dc2626;
+  --red-l:   #ef4444;
+  --orange:  #ea580c;
+  --trans: all 0.18s ease;
+}
+
+[data-theme="dark"] {
+  --bg:        #0d1117;
+  --bg2:       #161b22;
+  --surface:   #1c2333;
+  --card:      #1c2333;
+  --border:    #2d3748;
+  --border2:   #3d4f66;
+  --text:      #e2e8f0;
+  --text2:     #94a3b8;
+  --text3:     #64748b;
+  --shadow:    0 2px 12px #00000060;
+  --shadow-lg: 0 8px 32px #00000080;
+  --input-bg:  #0d1117;
+}
+
+[data-theme="light"] {
+  --bg:        #f0f4f8;
+  --bg2:       #e8edf3;
+  --surface:   #ffffff;
+  --card:      #ffffff;
+  --border:    #cbd5e1;
+  --border2:   #94a3b8;
+  --text:      #1e293b;
+  --text2:     #475569;
+  --text3:     #94a3b8;
+  --shadow:    0 2px 12px #0000001a;
+  --shadow-lg: 0 8px 32px #00000025;
+  --input-bg:  #f8fafc;
+}
+
+/* ── RESET ──────────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+html,body{height:100%;overflow:hidden}
+body{min-width:900px}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:13px;
+  display:flex;
+  flex-direction:column;
+  transition:background 0.25s,color 0.25s;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────────────── */
+header{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  height:52px;
+  padding:0 20px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-shrink:0;
+  box-shadow:var(--shadow);
+  z-index:20;
+}
+
+.logo{
+  font-family:var(--sans);
+  font-size:16px;
+  font-weight:800;
+  letter-spacing:-0.3px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-shrink:0;
+}
+.logo-shield{
+  width:28px;height:28px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-light));
+  border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;box-shadow:0 2px 8px #0099cc44;
+}
+.logo em{color:var(--accent);font-style:normal}
+
+.header-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
+
+/* ollama status pill */
+.ollama-pill{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;
+  padding:4px 10px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  color:var(--text2);
+  background:var(--bg);
+  flex-shrink:0;
+}
+.ollama-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--text3);
+  transition:var(--trans);
+}
+.ollama-pill.online .ollama-dot{background:var(--green-l);box-shadow:0 0 5px var(--green-l)}
+.ollama-pill.online{color:var(--green);border-color:#16a34a44}
+.ollama-pill.offline .ollama-dot{background:var(--red-l)}
+.ollama-pill.offline{color:var(--red);border-color:#dc262644}
+.ollama-pill.starting .ollama-dot{background:var(--yellow-l);animation:pulse 0.8s infinite}
+.ollama-pill.starting{color:var(--yellow);border-color:#d9770644}
+.start-ollama-btn{
+  background:none;border:1px solid currentColor;border-radius:4px;
+  color:inherit;font-family:var(--mono);font-size:10px;font-weight:700;
+  padding:1px 7px;cursor:pointer;margin-left:4px;
+  transition:opacity 0.15s;
+}
+.start-ollama-btn:hover{opacity:0.7}
+.start-ollama-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* model selector */
+.model-select-wrap{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.model-select-label{font-size:10px;color:var(--text3);white-space:nowrap;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
+.model-select{
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:12px;
+  padding:4px 8px;
+  outline:none;
+  min-width:160px;
+  max-width:260px;
+  cursor:pointer;
+}
+.model-select:focus{border-color:var(--accent)}
+
+/* header right controls */
+.header-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+
+.cache-chip{
+  font-size:10px;color:var(--text3);
+  display:flex;align-items:center;gap:4px;
+}
+.cache-chip span{color:var(--accent);font-weight:700}
+
+/* strict mode toggle */
+.toggle-wrap{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
+.toggle-wrap input{display:none}
+.toggle-track{
+  width:34px;height:18px;border-radius:9px;
+  background:var(--border);
+  position:relative;transition:background 0.2s;
+}
+.toggle-track::after{
+  content:'';position:absolute;
+  top:3px;left:3px;
+  width:12px;height:12px;
+  border-radius:50%;background:#fff;
+  transition:left 0.2s,background 0.2s;
+  box-shadow:0 1px 3px #0004;
+}
+.toggle-wrap input:checked~.toggle-track{background:var(--red)}
+.toggle-wrap input:checked~.toggle-track::after{left:19px}
+.toggle-label{font-size:11px;font-weight:600;color:var(--text2)}
+.toggle-wrap input:checked~.toggle-label{color:var(--red)}
+
+/* theme switch */
+.theme-btn{
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text2);
+  font-size:16px;
+  width:32px;height:32px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  transition:var(--trans);
+}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── WORKSPACE ───────────────────────────────────────────────────────────── */
+.workspace{
+  display:grid;
+  grid-template-columns:260px 1fr 320px 280px;
+  min-width:900px;
+  flex:1;
+  overflow:hidden;
+  gap:0;
+}
+
+/* ── GENERIC PANEL ───────────────────────────────────────────────────────── */
+.panel{
+  display:flex;flex-direction:column;
+  overflow:hidden;min-height:0;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+}
+.panel:last-child{border-right:none}
+
+.panel-hdr{
+  padding:10px 14px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.panel-title{
+  font-family:var(--sans);font-size:10px;font-weight:700;
+  letter-spacing:1.4px;text-transform:uppercase;color:var(--text3);
+}
+.panel-scroll{
+  flex:1;overflow-y:scroll;
+  padding:10px;
+  display:flex;flex-direction:column;gap:8px;
+  min-height:0;
+}
+.panel-scroll::-webkit-scrollbar{width:6px}
+.panel-scroll::-webkit-scrollbar-track{background:var(--bg2)}
+.panel-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── CARD (rounded bounded box) ─────────────────────────────────────────── */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  transition:border-color 0.15s;
+}
+.card:hover{border-color:var(--border2)}
+.card-hdr{
+  padding:8px 12px;
+  border-bottom:1px solid var(--border);
+  font-size:10px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  color:var(--text3);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg2);
+}
+
+/* ── LEFT: SCANNER PANEL ─────────────────────────────────────────────────── */
+.section-toggle{
+  width:100%;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:8px 12px;
+  color:var(--text);
+  font-family:var(--mono);font-size:11px;font-weight:600;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:4px;
+  transition:var(--trans);
+}
+.section-toggle:hover{border-color:var(--border2)}
+.section-toggle .chev{font-size:9px;color:var(--text3);transition:transform 0.2s}
+.section-toggle.open .chev{transform:rotate(90deg)}
+
+.sec-badge{
+  font-size:9px;padding:1px 6px;border-radius:8px;margin-left:6px;
+  background:var(--border);color:var(--text3);font-weight:600;
+}
+.sec-badge.active{background:#0099cc22;color:var(--accent)}
+
+.scanner-list{display:none;flex-direction:column;gap:3px;padding-left:4px}
+.scanner-list.open{display:flex}
+
+.sel-all-row{display:flex;gap:6px;padding:2px 6px 4px}
+.sel-btn{
+  background:none;border:none;
+  font-family:var(--mono);font-size:10px;color:var(--text3);
+  cursor:pointer;padding:2px 4px;border-radius:3px;transition:color 0.1s;
+}
+.sel-btn:hover{color:var(--accent)}
+
+/* scanner item card */
+.sc-item{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  overflow:hidden;
+  transition:border-color 0.15s;
+}
+.sc-item.checked{border-color:var(--accent);box-shadow:0 0 0 1px #0099cc22}
+.sc-item.warming{border-color:var(--yellow-l)!important}
+.sc-item.warmed{border-color:#22c55e55}
+
+.sc-row{
+  display:flex;align-items:center;gap:7px;
+  padding:6px 10px;cursor:pointer;user-select:none;
+}
+.sc-row input[type=checkbox]{display:none}
+
+.chkbox{
+  width:14px;height:14px;
+  border:1.5px solid var(--border2);
+  border-radius:3px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;
+  transition:var(--trans);
+}
+.sc-item.checked .chkbox{border-color:var(--accent);background:var(--accent);color:#fff}
+
+.sc-name{flex:1;font-size:11px;font-weight:500;color:var(--text)}
+
+.heavy-tag{
+  font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700;
+  background:#d9770620;color:var(--yellow);border:1px solid #d9770640;
+}
+
+.cache-dot{
+  width:6px;height:6px;border-radius:50%;
+  flex-shrink:0;background:var(--border2);transition:background 0.3s;
+}
+.cache-dot.warming{background:var(--yellow-l);animation:pulse 1s infinite}
+.cache-dot.warm{background:var(--green-l);box-shadow:0 0 4px var(--green-l)}
+
+.info-btn{
+  background:none;border:none;
+  color:var(--text3);font-size:10px;cursor:pointer;
+  padding:2px 3px;border-radius:3px;transition:color 0.1s;line-height:1;
+}
+.info-btn:hover{color:var(--accent)}
+
+/* scanner config */
+.sc-cfg{
+  display:none;
+  padding:8px 10px 10px;
+  border-top:1px solid var(--border);
+  background:var(--bg);
+  flex-direction:column;gap:6px;
+}
+.sc-item.checked .sc-cfg.has-cfg{display:flex}
+
+.cfg-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px}
+
+.cfg-input,.cfg-ta{
+  width:100%;
+  background:var(--input-bg);
+  border:1px solid var(--border);
+  border-radius:4px;
+  color:var(--text);
+  font-family:var(--mono);font-size:11px;
+  padding:5px 8px;outline:none;
+  transition:border-color 0.15s;
+  resize:vertical;
+}
+.cfg-input:focus,.cfg-ta:focus{border-color:var(--accent)}
+.cfg-ta{min-height:48px}
+
+.cfg-slider-row{display:flex;align-items:center;gap:8px}
+.cfg-slider{flex:1;accent-color:var(--accent)}
+.cfg-slider-val{font-size:11px;color:var(--accent);width:36px;text-align:right}
+
+/* ── CENTER: CHAT ────────────────────────────────────────────────────────── */
+.chat-panel{
+  background:var(--bg);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;min-height:0;
+}
+.chat-hdr{
+  padding:10px 16px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.chat-area{
+  flex:1;overflow-y:scroll;
+  padding:14px 16px;
+  display:flex;flex-direction:column;gap:12px;
+  min-height:0;
+}
+.chat-area::-webkit-scrollbar{width:6px}
+.chat-area::-webkit-scrollbar-track{background:var(--bg2)}
+.chat-area::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.chat-area::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+.chat-area{scrollbar-gutter:stable}
+
+/* empty state */
+.empty-state{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:10px;text-align:center;color:var(--text3);padding:20px;
+}
+.empty-icon{font-size:36px;opacity:0.35}
+.empty-title{font-family:var(--sans);font-size:16px;font-weight:700;color:var(--text2)}
+.empty-sub{font-size:11px;line-height:1.7;max-width:280px;color:var(--text3)}
+
+/* chat message cards */
+.msg-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  animation:slideUp 0.2s ease;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.msg-card-hdr{
+  padding:8px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg2);
+}
+.msg-role{
+  font-size:10px;font-weight:700;letter-spacing:0.8px;
+  text-transform:uppercase;color:var(--text3);
+}
+.msg-status{font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px}
+.status-ok{color:var(--green)}
+.status-warn{color:var(--yellow)}
+.status-blocked{color:var(--red)}
+
+.msg-body{padding:10px 12px;font-size:13px;line-height:1.65;color:var(--text);word-break:break-word}
+
+/* LLM response card */
+.llm-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  animation:slideUp 0.2s ease 0.05s both;
+}
+.llm-card-hdr{
+  padding:8px 12px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(90deg,var(--bg2),var(--bg2));
+  display:flex;align-items:center;justify-content:space-between;
+}
+.llm-model-tag{
+  font-size:10px;font-weight:700;
+  color:var(--accent);letter-spacing:0.5px;
+}
+.llm-ms{font-size:10px;color:var(--text3)}
+
+.llm-body{
+  padding:10px 12px;
+  font-size:13px;line-height:1.7;
+  color:var(--text);
+  white-space:pre-wrap;word-break:break-word;
+}
+
+/* mini scan tags on messages */
+.scan-tags{display:flex;flex-wrap:wrap;gap:4px;padding:6px 12px 6px}
+.scan-tag{
+  font-size:9px;border-radius:4px;padding:2px 7px;font-weight:600;white-space:nowrap;
+}
+.scan-tag.pass{background:#16a34a15;color:var(--green);border:1px solid #16a34a30}
+.scan-tag.fail{background:#dc262615;color:var(--red);border:1px solid #dc262630}
+.scan-tag.err{background:#d9770615;color:var(--yellow);border:1px solid #d9770630}
+
+/* thinking indicator */
+.thinking{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px;color:var(--text3);font-size:12px;
+}
+.thinking-dots{display:flex;gap:3px}
+.thinking-dots span{
+  width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:0.4;
+  animation:tpulse 1.2s infinite;
+}
+.thinking-dots span:nth-child(2){animation-delay:0.2s}
+.thinking-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes tpulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1)}}
+
+/* scan mode banner */
+.mode-banner{
+  padding:5px 12px;
+  font-size:10px;font-weight:500;
+  display:flex;align-items:center;justify-content:space-between;gap:6px;
+  border-top:1px solid var(--border);
+  color:var(--text3);
+  background:var(--bg2);
+  flex-shrink:0;
+}
+
+/* input area */
+.input-area{
+  border-top:1px solid var(--border);
+  padding:12px 16px;
+  display:flex;flex-direction:column;gap:8px;
+  flex-shrink:0;
+  background:var(--surface);
+}
+.input-row{display:flex;gap:8px;align-items:flex-end}
+
+.msg-ta{
+  flex:1;
+  background:var(--input-bg);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  font-family:var(--mono);font-size:13px;
+  padding:9px 12px;outline:none;resize:none;
+  min-height:56px;max-height:140px;
+  line-height:1.5;
+  transition:border-color 0.15s;
+}
+.msg-ta:focus{border-color:var(--accent)}
+.msg-ta::placeholder{color:var(--text3)}
+
+.send-btn{
+  background:linear-gradient(135deg,var(--accent),var(--accent-light));
+  border:none;border-radius:var(--radius-sm);
+  color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;
+  padding:9px 18px;height:56px;
+  cursor:pointer;white-space:nowrap;
+  transition:opacity 0.15s,transform 0.1s;
+  box-shadow:0 2px 8px #0099cc44;
+}
+.send-btn:hover{opacity:0.9}
+.send-btn:active{transform:scale(0.97)}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+.input-meta{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;color:var(--text3);
+}
+.warn-bar{
+  background:#d9770615;border:1px solid #d9770640;
+  border-radius:4px;padding:5px 10px;
+  font-size:11px;color:var(--yellow);display:none;
+}
+.warn-bar.show{display:block}
+
+/* mode tabs */
+.mode-tabs{display:flex;gap:4px}
+.mode-tab{
+  font-family:var(--mono);font-size:10px;font-weight:600;
+  padding:4px 10px;border-radius:4px;border:1px solid var(--border);
+  background:none;color:var(--text3);cursor:pointer;
+  transition:var(--trans);
+}
+.mode-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* clear btn */
+.clr-btn{
+  background:none;border:none;
+  font-family:var(--mono);font-size:10px;color:var(--text3);
+  cursor:pointer;padding:2px 6px;border-radius:3px;transition:color 0.15s;
+}
+.clr-btn:hover{color:var(--red)}
+
+/* ── RIGHT: SCAN RESULTS ─────────────────────────────────────────────────── */
+.results-panel{
+  background:var(--bg2);
+  display:flex;flex-direction:column;
+  overflow:hidden;min-height:0;
+  border-right:1px solid var(--border);
+}
+.results-scroll{
+  flex:1;overflow-y:scroll;padding:10px;
+  display:flex;flex-direction:column;gap:8px;min-height:0;
+}
+.results-scroll::-webkit-scrollbar{width:6px}
+.results-scroll::-webkit-scrollbar-track{background:var(--bg2)}
+.results-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+.results-empty{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;height:100%;
+  gap:8px;color:var(--text3);text-align:center;
+}
+.results-empty-icon{font-size:28px;opacity:0.3}
+
+/* result block card */
+.res-block{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.res-block-hdr{
+  padding:7px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg2);
+  font-size:10px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;color:var(--text3);
+}
+.overall-badge{
+  font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;
+}
+.overall-badge.pass{background:#16a34a18;color:var(--green);border:1px solid #16a34a30}
+.overall-badge.fail{background:#dc262618;color:var(--red);border:1px solid #dc262630}
+.overall-badge.na{background:var(--border);color:var(--text3)}
+
+/* scanner result rows */
+.res-table{width:100%;border-collapse:collapse}
+.res-row{border-bottom:1px solid var(--border);transition:background 0.1s}
+.res-row:last-child{border-bottom:none}
+.res-row:hover{background:#ffffff06}
+
+.res-row td{padding:7px 10px;vertical-align:top}
+.res-row td:first-child{width:120px}
+
+.res-scanner-name{font-size:11px;font-weight:600;color:var(--text)}
+.res-latency{font-size:9px;color:var(--text3);margin-left:4px}
+
+.score-bar-wrap{display:flex;align-items:center;gap:5px;margin-top:3px}
+.score-bar{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.score-fill{height:100%;border-radius:2px;transition:width 0.4s}
+.fill-g{background:var(--green-l)}
+.fill-y{background:var(--yellow-l)}
+.fill-r{background:var(--red-l)}
+.score-num{font-size:10px;color:var(--text3);width:36px;text-align:right}
+
+.res-detail{font-size:11px;color:var(--text2);line-height:1.5;margin-top:1px}
+.res-error{font-size:11px;color:var(--orange);line-height:1.5}
+.res-sanitized{font-size:10px;color:var(--accent);margin-top:2px}
+
+/* diff block */
+.diff-card{
+  margin:0 10px 10px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  overflow:hidden;font-size:11px;
+}
+.diff-row{padding:5px 10px;display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+.diff-row.minus{background:#dc262610;border-bottom:1px solid var(--border)}
+.diff-row.plus{background:#16a34a10}
+.diff-sym{font-weight:700;font-size:10px;flex-shrink:0;width:12px;margin-top:1px}
+.diff-row.minus .diff-sym{color:var(--red)}
+.diff-row.plus .diff-sym{color:var(--green)}
+
+/* blocked banner */
+.blocked-banner{
+  background:#dc262615;border:1px solid #dc262640;
+  border-radius:var(--radius);padding:10px 14px;
+  display:flex;align-items:center;gap:10px;
+  font-size:12px;font-weight:600;color:var(--red);
+  box-shadow:var(--shadow);
+}
+
+/* meta bar */
+.res-meta{
+  padding:6px 12px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;color:var(--text3);background:var(--bg2);
+}
+.res-meta-ms{color:var(--accent);font-weight:700}
+
+/* json view */
+.json-btn{
+  background:none;border:1px solid var(--border2);
+  border-radius:4px;color:var(--text3);
+  font-family:var(--mono);font-size:9px;cursor:pointer;
+  padding:2px 7px;transition:var(--trans);
+}
+.json-btn:hover{border-color:var(--accent);color:var(--accent)}
+.json-view{
+  display:none;
+  background:var(--bg);
+  border-top:1px solid var(--border);
+  padding:8px 10px;
+  font-size:10px;line-height:1.6;color:var(--text2);
+  white-space:pre-wrap;word-break:break-word;
+  max-height:260px;overflow-y:auto;
+}
+.json-view.show{display:block}
+
+/* ── FAR RIGHT: STATS ────────────────────────────────────────────────────── */
+.stats-panel{
+  background:var(--bg2);
+  display:flex;flex-direction:column;
+  overflow:hidden;min-height:0;
+}
+.stats-scroll{
+  flex:1;overflow-y:scroll;padding:10px;
+  display:flex;flex-direction:column;gap:8px;min-height:0;
+}
+.stats-scroll::-webkit-scrollbar{width:6px}
+.stats-scroll::-webkit-scrollbar-track{background:var(--bg2)}
+.stats-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* stat summary nums */
+.stat-nums{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border)}
+.stat-num-cell{background:var(--card);padding:6px 6px;display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden}
+.stat-val{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-lbl{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:0px;white-space:nowrap}
+
+/* sparkline */
+.chart-wrap{padding:6px 8px 8px}
+.chart-canvas{width:100%;height:56px;display:block}
+.chart-foot{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px}
+
+/* scanner stat table */
+.sc-stat-tbl{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed}
+.sc-stat-tbl th{
+  padding:4px 6px;text-align:left;font-size:9px;font-weight:700;
+  letter-spacing:0.5px;text-transform:uppercase;color:var(--text3);
+  border-bottom:1px solid var(--border);background:var(--bg2);white-space:nowrap;
+}
+.sc-stat-tbl th:not(:first-child){text-align:right}
+.sc-stat-tbl td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:10px}
+.sc-stat-tbl tr:last-child td{border-bottom:none}
+.sc-stat-tbl td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.sc-stat-tbl tr:hover td{background:#ffffff05}
+
+.type-pin{font-size:8px;padding:1px 4px;border-radius:2px;font-weight:700;margin-right:4px}
+.type-pin.in{background:#0099cc18;color:var(--accent)}
+.type-pin.out{background:#16a34a18;color:var(--green)}
+
+.ms-fast{color:var(--green-l)}
+.ms-medium{color:var(--accent)}
+.ms-slow{color:var(--yellow-l)}
+.ms-vslow{color:var(--red-l)}
+.fail-r{color:var(--red)}
+
+/* req history bars */
+.req-hist-item{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 10px;border-bottom:1px solid var(--border);
+  font-size:10px;cursor:default;transition:background 0.1s;
+}
+.req-hist-item:hover{background:#ffffff05}
+.req-hist-item:last-child{border-bottom:none}
+.req-id{color:var(--text3);width:20px;flex-shrink:0;font-size:10px}
+.req-bar-w{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.req-bar-f{height:100%;border-radius:3px;background:var(--accent);transition:width 0.3s}
+.req-bar-f.blocked{background:var(--red)}
+.req-ms{width:44px;text-align:right;color:var(--accent);font-weight:600;font-size:10px;white-space:nowrap}
+.req-ico{width:14px;text-align:center}
+
+/* sysinfo */
+.sysinfo-row{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  padding:5px 8px;border-bottom:1px solid var(--border);font-size:10px;gap:6px;
+}
+.sysinfo-row:last-child{border-bottom:none}
+.si-key{color:var(--text3);flex-shrink:0;white-space:nowrap;min-width:60px}
+.si-val{color:var(--text);font-weight:500;text-align:right;word-break:break-all;flex:1;min-width:0}
+.si-val.accent{color:var(--accent)}
+.si-val.g{color:var(--green)}
+.si-val.r{color:var(--red)}
+
+.no-stats{padding:16px;text-align:center;font-size:11px;color:var(--text3)}
+
+/* ── TOOLTIP ─────────────────────────────────────────────────────────────── */
+.tooltip{
+  position:fixed;z-index:999;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--radius-sm);padding:7px 10px;
+  font-size:11px;color:var(--text);max-width:230px;line-height:1.5;
+  pointer-events:none;opacity:0;transition:opacity 0.15s;
+  box-shadow:var(--shadow-lg);
+}
+.tooltip.show{opacity:1}
+
+/* ── LOADING OVERLAY ─────────────────────────────────────────────────────── */
+.loading-overlay{
+  display:none;position:fixed;inset:0;
+  background:var(--bg)cc;z-index:100;
+  align-items:center;justify-content:center;flex-direction:column;gap:14px;
+}
+.loading-overlay.show{display:flex}
+.spinner{
+  width:36px;height:36px;
+  border:3px solid var(--border);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.load-title{font-family:var(--sans);font-size:14px;font-weight:700;color:var(--text)}
+.load-sub{font-size:11px;color:var(--text3)}
+</style>
+</head>
+<body>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="load-title">Running LLM-Guard…</div>
+  <div class="load-sub" id="loadSub">Initializing scanners…</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-shield">🛡</div>
+    LLM-Guard <em>Playground</em>
+  </div>
+
+  <div class="header-sep"></div>
+
+  <!-- Ollama status + model selector -->
+  <div class="ollama-pill" id="ollamaPill">
+    <div class="ollama-dot"></div>
+    <span id="ollamaStatus">Checking…</span>
+    <button class="start-ollama-btn" id="startOllamaBtn" onclick="startOllama()" style="display:none" title="Launch Ollama in the background">▶ Start</button>
+  </div>
+
+  <div class="model-select-wrap">
+    <span class="model-select-label">Model</span>
+    <select class="model-select" id="modelSelect">
+      <option value="">— no LLM (scan only) —</option>
+    </select>
+    <button class="clr-btn" onclick="refreshModels()" title="Refresh model list">⟳</button>
+  </div>
+
+  <div class="header-sep"></div>
+
+  <div class="header-right">
+    <div class="cache-chip">⚡ <span id="cacheCount">0</span> cached</div>
+
+    <label class="toggle-wrap" title="Stop at first scanner failure">
+      <input type="checkbox" id="strictMode"/>
+      <div class="toggle-track"></div>
+      <span class="toggle-label">Strict</span>
+    </label>
+
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+  </div>
+</header>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- LEFT: SCANNERS -->
+  <div class="panel">
+    <div class="panel-hdr">
+      <span class="panel-title">Scanners</span>
+      <span style="font-size:10px;color:var(--text3)"><span id="activeCount">0</span> active</span>
+    </div>
+    <div class="panel-scroll" id="scannerPanel"></div>
+  </div>
+
+  <!-- CENTER: CHAT -->
+  <div class="chat-panel">
+    <div class="chat-hdr">
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tabChat" onclick="setMode('chat')">💬 Chat + LLM</button>
+        <button class="mode-tab" id="tabScan" onclick="setMode('scan')">🔍 Scan Only</button>
+      </div>
+      <button class="clr-btn" onclick="clearChat()">Clear</button>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🛡</div>
+        <div class="empty-title">LLM-Guard Playground</div>
+        <div class="empty-sub">Select scanners on the left, pick an Ollama model in the header, and start analyzing prompts.</div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="warn-bar" id="warnBar">⚠ No scanners selected — enable at least one scanner.</div>
+      <div class="input-row">
+        <textarea class="msg-ta" id="msgInput" placeholder="Enter a prompt… (Ctrl+Enter to send)" rows="3"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="handleSend()">Send</button>
+      </div>
+      <div class="input-meta">
+        <span id="modeHint" style="color:var(--text3);font-size:10px">Mode: Chat + LLM</span>
+        <span id="charCount" style="color:var(--text3)">0 chars</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN RESULTS -->
+  <div class="results-panel">
+    <div class="panel-hdr">
+      <span class="panel-title">Scan Results</span>
+      <button class="json-btn" id="globalJsonBtn" onclick="toggleAllJson()" style="display:none">{ } JSON</button>
+    </div>
+    <div class="results-scroll" id="resultsScroll">
+      <div class="results-empty">
+        <div class="results-empty-icon">📋</div>
+        <div style="font-size:11px;color:var(--text3)">Results appear here after analysis</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-panel">
+    <div class="panel-hdr">
+      <span class="panel-title">⏱ Latency &amp; Stats</span>
+      <button class="clr-btn" onclick="resetStats()">↺ Reset</button>
+    </div>
+    <div class="stats-scroll" id="statsScroll">
+      <div class="no-stats" id="statsEmpty">No requests yet.</div>
+
+      <div class="card" id="cardSummary" style="display:none">
+        <div class="card-hdr">Request Summary</div>
+        <div class="stat-nums">
+          <div class="stat-num-cell"><div class="stat-val" id="sTotal">0</div><div class="stat-lbl">Reqs</div></div>
+          <div class="stat-num-cell"><div class="stat-val ms-fast" id="sAvg">0ms</div><div class="stat-lbl">Avg</div></div>
+          <div class="stat-num-cell"><div class="stat-val ms-fast" id="sMin">0ms</div><div class="stat-lbl">Min</div></div>
+          <div class="stat-num-cell"><div class="stat-val ms-slow" id="sMax">0ms</div><div class="stat-lbl">Max</div></div>
+        </div>
+      </div>
+
+<!-- Latency Trend removed -->
+
+      <div class="card" id="cardHist" style="display:none">
+        <div class="card-hdr">Request History</div>
+        <div id="reqHistList" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+
+      <div class="card" id="cardScanner" style="display:none">
+        <div class="card-hdr">Per-Scanner Latency</div>
+        <div style="max-height:200px;overflow-y:auto"><table class="sc-stat-tbl">
+          <thead><tr>
+            <th>Scanner</th><th>Avg</th><th>Max</th><th>N</th><th>Fail%</th>
+          </tr></thead>
+          <tbody id="scannerStatBody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="card" id="cardSys">
+        <div class="card-hdr">System &amp; Device</div>
+        <div id="sysinfoGrid" style="max-height:220px;overflow-y:auto"><div class="sysinfo-row"><span class="si-key">Loading…</span></div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────────────
+let scanners = { input_scanners: [], output_scanners: [] };
+let lastResult = null;
+let mode = 'chat';   // 'chat' | 'scan'
+let isDark = true;
+
+// ── THEME ────────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.getElementById('themeBtn').textContent = isDark ? '🌙' : '☀️';
+}
+
+// ── MODE ─────────────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('tabChat').classList.toggle('active', m === 'chat');
+  document.getElementById('tabScan').classList.toggle('active', m === 'scan');
+  const hint = m === 'chat' ? 'Mode: Chat + LLM (input scan → Ollama → output scan)' : 'Mode: Scan Only (no LLM call)';
+  document.getElementById('modeHint').textContent = hint;
+  document.getElementById('sendBtn').textContent = m === 'chat' ? 'Send' : 'Analyze';
+}
+
+// ── OLLAMA ───────────────────────────────────────────────────────────────────
+async function checkOllama() {
+  try {
+    const res = await fetch('/ollama/status');
+    const d = await res.json();
+    setOllamaState(d.running ? 'online' : 'offline', d.model_count);
+  } catch {
+    setOllamaState('offline', 0);
+  }
+}
+
+function setOllamaState(state, modelCount) {
+  const pill = document.getElementById('ollamaPill');
+  const lbl  = document.getElementById('ollamaStatus');
+  const btn  = document.getElementById('startOllamaBtn');
+  if (state === 'online') {
+    pill.className = 'ollama-pill online';
+    lbl.textContent = `Ollama · ${modelCount} model${modelCount !== 1 ? 's' : ''}`;
+    btn.style.display = 'none';
+  } else if (state === 'starting') {
+    pill.className = 'ollama-pill starting';
+    lbl.textContent = 'Starting Ollama…';
+    btn.style.display = 'none';
+  } else {
+    pill.className = 'ollama-pill offline';
+    lbl.textContent = 'Ollama offline';
+    btn.style.display = 'inline-block';
+    btn.disabled = false;
+    btn.textContent = '▶ Start';
+  }
+}
+
+async function startOllama() {
+  const btn = document.getElementById('startOllamaBtn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  setOllamaState('starting', 0);
+  try {
+    const res = await fetch('/ollama/start', { method: 'POST' });
+    const d = await res.json();
+    if (d.started) {
+      // Poll until it's up (up to 15s)
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const sr = await fetch('/ollama/status');
+          const sd = await sr.json();
+          if (sd.running) {
+            clearInterval(poll);
+            setOllamaState('online', sd.model_count);
+            refreshModels();
+          } else if (attempts >= 15) {
+            clearInterval(poll);
+            setOllamaState('offline', 0);
+          }
+        } catch {
+          if (attempts >= 15) { clearInterval(poll); setOllamaState('offline', 0); }
+        }
+      }, 1000);
+    } else {
+      setOllamaState('offline', 0);
+      alert(d.error || 'Could not start Ollama. Make sure it is installed.');
+    }
+  } catch(e) {
+    setOllamaState('offline', 0);
+    alert('Start request failed: ' + e.message);
+  }
+}
+
+async function refreshModels() {
+  try {
+    const res = await fetch('/ollama/models');
+    const d = await res.json();
+    const sel = document.getElementById('modelSelect');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— no LLM (scan only) —</option>';
+    d.models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.name;
+      opt.textContent = `${m.name}  (${m.params || '?'}  ${m.size_gb}GB)`;
+      sel.appendChild(opt);
+    });
+    if (cur) sel.value = cur;
+    checkOllama();
+  } catch {}
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const res = await fetch('/scanners');
+    scanners = await res.json();
+    buildScannerPanel();
+  } catch {
+    document.getElementById('scannerPanel').innerHTML =
+      '<div style="color:var(--red);font-size:11px;padding:8px">⚠ Failed to connect to backend.</div>';
+  }
+  checkOllama();
+  refreshModels();
+  loadStats();
+  setInterval(loadStats, 10000);
+}
+
+// ── BUILD SCANNER PANEL ───────────────────────────────────────────────────────
+function buildScannerPanel() {
+  const panel = document.getElementById('scannerPanel');
+  panel.innerHTML = '';
+  [
+    { key: 'input_scanners',  label: 'Input Scanners',  icon: '📨', prefix: 'in'  },
+    { key: 'output_scanners', label: 'Output Scanners', icon: '📤', prefix: 'out' },
+  ].forEach(({ key, label, icon, prefix }) => {
+    const list = scanners[key];
+    const sec = document.createElement('div');
+
+    const btn = document.createElement('button');
+    btn.className = 'section-toggle open';
+    btn.innerHTML = `<span>${icon} ${label} <span class="sec-badge" id="badge-${prefix}">0</span></span><span class="chev">▶</span>`;
+    btn.onclick = () => { btn.classList.toggle('open'); ul.classList.toggle('open'); };
+
+    const ul = document.createElement('div');
+    ul.className = 'scanner-list open';
+    const selRow = document.createElement('div');
+    selRow.className = 'sel-all-row';
+    selRow.innerHTML = `<button class="sel-btn" onclick="selectAll('${prefix}',true)">All</button><span style="color:var(--border2)">|</span><button class="sel-btn" onclick="selectAll('${prefix}',false)">None</button>`;
+    ul.appendChild(selRow);
+    list.forEach(sc => ul.appendChild(buildScannerItem(sc, prefix)));
+
+    sec.appendChild(btn);
+    sec.appendChild(ul);
+    panel.appendChild(sec);
+  });
+  updateActiveCount();
+}
+
+function buildScannerItem(sc, prefix) {
+  const id = `${prefix}-${sc.id}`;
+  const item = document.createElement('div');
+  item.className = 'sc-item';
+  item.id = `item-${id}`;
+
+  const row = document.createElement('label');
+  row.className = 'sc-row';
+  row.setAttribute('for', `chk-${id}`);
+
+  const chk = document.createElement('input');
+  chk.type = 'checkbox'; chk.id = `chk-${id}`;
+  chk.dataset.scanner = sc.id; chk.dataset.prefix = prefix;
+  chk.onchange = () => onScannerToggle(sc, prefix, item, chk);
+
+  const box = document.createElement('div'); box.className = 'chkbox'; box.innerHTML = '✓';
+  const name = document.createElement('span'); name.className = 'sc-name'; name.textContent = sc.label;
+
+  row.appendChild(chk); row.appendChild(box); row.appendChild(name);
+
+  if (sc.heavy) {
+    const hb = document.createElement('span'); hb.className = 'heavy-tag'; hb.textContent = '⚡ heavy';
+    row.appendChild(hb);
+    const dot = document.createElement('span'); dot.className = 'cache-dot cold'; dot.id = `dot-${id}`;
+    dot.title = 'Model not loaded'; row.appendChild(dot);
+  }
+
+  const ib = document.createElement('button'); ib.className = 'info-btn'; ib.textContent = '?';
+  ib.onmouseenter = e => showTip(e, sc.description); ib.onmouseleave = hideTip;
+  ib.onclick = e => e.preventDefault();
+  row.appendChild(ib);
+  item.appendChild(row);
+
+  if (sc.configurable && sc.config_fields) {
+    const cfg = document.createElement('div');
+    cfg.className = 'sc-cfg has-cfg'; cfg.id = `cfg-${id}`;
+    sc.config_fields.forEach(field => {
+      const wrap = document.createElement('div');
+      const lbl = document.createElement('div'); lbl.className = 'cfg-label'; lbl.textContent = field.label;
+      wrap.appendChild(lbl);
+      if (field.type === 'textarea') {
+        const ta = document.createElement('textarea'); ta.className = 'cfg-ta';
+        ta.id = `cfg-${id}-${field.key}`; ta.placeholder = field.placeholder || ''; ta.rows = 2;
+        wrap.appendChild(ta);
+      } else if (field.type === 'slider') {
+        const sr = document.createElement('div'); sr.className = 'cfg-slider-row';
+        const sl = document.createElement('input'); sl.type = 'range'; sl.className = 'cfg-slider';
+        sl.id = `cfg-${id}-${field.key}`; sl.min = field.min ?? 0; sl.max = field.max ?? 1;
+        sl.step = field.step ?? 0.05; sl.value = field.default ?? 0.5;
+        const vd = document.createElement('span'); vd.className = 'cfg-slider-val'; vd.textContent = sl.value;
+        sl.oninput = () => { vd.textContent = parseFloat(sl.value).toFixed(2); };
+        sr.appendChild(sl); sr.appendChild(vd); wrap.appendChild(sr);
+      } else if (field.type === 'number') {
+        const inp = document.createElement('input'); inp.type = 'number'; inp.className = 'cfg-input';
+        inp.id = `cfg-${id}-${field.key}`; inp.min = field.min ?? 1; inp.max = field.max ?? 9999;
+        inp.value = field.default ?? 512; wrap.appendChild(inp);
+      } else {
+        const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'cfg-input';
+        inp.id = `cfg-${id}-${field.key}`; inp.placeholder = field.placeholder || ''; wrap.appendChild(inp);
+      }
+      cfg.appendChild(wrap);
+    });
+    item.appendChild(cfg);
+  }
+  return item;
+}
+
+function onScannerToggle(sc, prefix, item, chk) {
+  item.classList.toggle('checked', chk.checked);
+  updateBadge(prefix); updateActiveCount();
+  if (chk.checked && sc.heavy) {
+    const dot = document.getElementById(`dot-${prefix}-${sc.id}`);
+    if (dot && !dot.classList.contains('warm')) warmupScanner(sc.id, prefix, dot, item);
+  }
+}
+
+async function warmupScanner(scId, prefix, dot, item) {
+  dot.className = 'cache-dot warming'; dot.title = 'Loading model…'; item.classList.add('warming');
+  try {
+    const body = prefix === 'in' ? { input_scanners: [scId], output_scanners: [] } : { input_scanners: [], output_scanners: [scId] };
+    const res = await fetch('/warmup', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await res.json();
+    const key = `${prefix}:${scId}`;
+    if (d.warmed && d.warmed.includes(key)) {
+      dot.className = 'cache-dot warm'; dot.title = 'Model loaded ✓';
+      item.classList.remove('warming'); item.classList.add('warmed');
+      document.getElementById('cacheCount').textContent = d.total_cached;
+    } else { dot.className = 'cache-dot cold'; item.classList.remove('warming'); }
+  } catch { dot.className = 'cache-dot cold'; item.classList.remove('warming'); }
+}
+
+function selectAll(prefix, val) {
+  document.querySelectorAll(`input[data-prefix="${prefix}"]`).forEach(chk => {
+    chk.checked = val;
+    const item = document.getElementById(`item-${prefix}-${chk.dataset.scanner}`);
+    if (item) item.classList.toggle('checked', val);
+  });
+  updateBadge(prefix); updateActiveCount();
+}
+function updateBadge(prefix) {
+  const c = document.querySelectorAll(`input[data-prefix="${prefix}"]:checked`).length;
+  const b = document.getElementById(`badge-${prefix}`);
+  if (b) { b.textContent = c; b.className = c > 0 ? 'sec-badge active' : 'sec-badge'; }
+}
+function updateActiveCount() {
+  document.getElementById('activeCount').textContent =
+    document.querySelectorAll('input[type=checkbox][data-prefix]:checked').length;
+}
+
+function collectScanners(prefix) {
+  const list = prefix === 'in' ? scanners.input_scanners : scanners.output_scanners;
+  const out = [];
+  document.querySelectorAll(`input[data-prefix="${prefix}"]:checked`).forEach(chk => {
+    const scId = chk.dataset.scanner;
+    const sc = list.find(s => s.id === scId);
+    const params = {};
+    if (sc && sc.configurable && sc.config_fields) {
+      sc.config_fields.forEach(f => {
+        const el = document.getElementById(`cfg-${prefix}-${scId}-${f.key}`);
+        if (el) params[f.key] = el.value;
+      });
+    }
+    out.push({ name: scId, params });
+  });
+  return out;
+}
+
+// ── SEND / ANALYZE ────────────────────────────────────────────────────────────
+async function handleSend() {
+  const msg = document.getElementById('msgInput').value.trim();
+  if (!msg) return;
+  const inScanners  = collectScanners('in');
+  const outScanners = collectScanners('out');
+  const warnBar = document.getElementById('warnBar');
+  if (inScanners.length === 0 && outScanners.length === 0) { warnBar.classList.add('show'); return; }
+  warnBar.classList.remove('show');
+
+  const selectedModel = document.getElementById('modelSelect').value;
+  const strict = document.getElementById('strictMode').checked;
+
+  if (mode === 'chat' && selectedModel) {
+    await runChat(msg, selectedModel, inScanners, outScanners, strict);
+  } else {
+    await runScanOnly(msg, inScanners, outScanners, strict);
+  }
+  document.getElementById('msgInput').value = '';
+  document.getElementById('charCount').textContent = '0 chars';
+}
+
+// ── SCAN ONLY ─────────────────────────────────────────────────────────────────
+async function runScanOnly(msg, inScanners, outScanners, strict) {
+  showLoading('Running scanners…');
+  document.getElementById('sendBtn').disabled = true;
+  try {
+    const res = await fetch('/scan', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ message: msg, input_scanners: inScanners, output_scanners: outScanners, strict_mode: strict }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail);
+    const data = await res.json();
+    lastResult = data;
+    document.getElementById('emptyState').style.display = 'none';
+    addUserBubble(msg, data);
+    renderResults(data, null, null);
+    loadStats();
+  } catch(e) { alert('Error: ' + e.message); }
+  finally { hideLoading(); document.getElementById('sendBtn').disabled = false; }
+}
+
+// ── CHAT + LLM ────────────────────────────────────────────────────────────────
+async function runChat(msg, model, inScanners, outScanners, strict) {
+  showLoading('Scanning input…');
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('emptyState').style.display = 'none';
+
+  // Optimistically add user bubble with thinking indicator
+  const userBubbleId = addUserBubblePending(msg);
+  const llmBubbleId  = addLLMBubblePending(model);
+
+  try {
+    const subs = ['Scanning input…', 'Calling Ollama…', 'Scanning output…', 'Finishing…'];
+    let si = 0;
+    const subInt = setInterval(() => { si = (si+1)%subs.length; document.getElementById('loadSub').textContent = subs[si]; }, 1800);
+
+    const res = await fetch('/chat', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model, prompt: msg, original_prompt: msg,
+        input_scanners: inScanners, output_scanners: outScanners, strict_mode: strict,
+      }),
+    });
+    clearInterval(subInt);
+    if (!res.ok) throw new Error((await res.json()).detail);
+    const data = await res.json();
+
+    // Update user bubble with scan result
+    finalizeUserBubble(userBubbleId, msg, data.input_scan);
+    // Update LLM bubble
+    finalizeLLMBubble(llmBubbleId, data);
+
+    renderResults(data.input_scan, data.output_scan, data);
+    loadStats();
+  } catch(e) {
+    finalizeUserBubble(userBubbleId, msg, null);
+    finalizeLLMBubble(llmBubbleId, { llm_response: null, llm_ms: 0, output_scan: null, blocked_stage: null, model });
+    alert('Error: ' + e.message);
+  } finally {
+    hideLoading();
+    document.getElementById('sendBtn').disabled = false;
+  }
+}
+
+// ── CHAT BUBBLES ──────────────────────────────────────────────────────────────
+function addUserBubble(msg, scanData) {
+  const allValid = scanData.input_results.every(r => r.is_valid);
+  const statusCls = scanData.blocked ? 'status-blocked' : (allValid ? 'status-ok' : 'status-warn');
+  const statusTxt = scanData.blocked ? '🚫 BLOCKED' : (allValid ? '✓ PASS' : '⚠ FLAGS');
+  const card = document.createElement('div');
+  card.className = 'msg-card';
+  card.innerHTML = `
+    <div class="msg-card-hdr">
+      <span class="msg-role">📨 Prompt</span>
+      <span class="msg-status ${statusCls}">${statusTxt}</span>
+    </div>
+    <div class="msg-body">${escHtml(msg)}</div>
+    ${buildMiniTags(scanData.input_results || [])}
+    <div class="mode-banner"><span>⏱ Scan</span><span>${scanData.scan_duration_ms}ms</span></div>
+  `;
+  appendChat(card);
+}
+
+function addUserBubblePending(msg) {
+  const id = 'ubub-' + Date.now();
+  const card = document.createElement('div');
+  card.className = 'msg-card'; card.id = id;
+  card.innerHTML = `<div class="msg-card-hdr"><span class="msg-role">📨 Prompt</span><span class="msg-status"><div class="thinking-dots"><span></span><span></span><span></span></div></span></div><div class="msg-body">${escHtml(msg)}</div><div class="mode-banner"><span>⏱ scanning…</span><span></span></div>`;
+  appendChat(card);
+  return id;
+}
+
+function finalizeUserBubble(id, msg, scanData) {
+  const card = document.getElementById(id);
+  if (!card) return;
+  if (!scanData) {
+    card.innerHTML = `<div class="msg-card-hdr"><span class="msg-role">📨 Prompt</span><span class="msg-status status-warn">⚠ error</span></div><div class="msg-body">${escHtml(msg)}</div><div class="mode-banner"><span>⏱ Input scan</span><span>—</span></div>`;
+    return;
+  }
+  const results = Array.isArray(scanData.input_results) ? scanData.input_results : [];
+  const allValid = results.length === 0 || results.every(r => r.is_valid);
+  const statusCls = scanData.blocked ? 'status-blocked' : (allValid ? 'status-ok' : 'status-warn');
+  const statusTxt = scanData.blocked ? '🚫 BLOCKED' : (allValid ? '✓ PASS' : '⚠ FLAGS');
+  const ms = scanData.scan_duration_ms ?? '—';
+  card.innerHTML = `
+    <div class="msg-card-hdr">
+      <span class="msg-role">📨 Prompt</span>
+      <span class="msg-status ${statusCls}">${statusTxt}</span>
+    </div>
+    <div class="msg-body">${escHtml(msg)}</div>
+    ${buildMiniTags(results)}
+    <div class="mode-banner"><span>⏱ Input scan</span><span>${ms}ms</span></div>
+  `;
+}
+
+function addLLMBubblePending(model) {
+  const id = 'llmbub-' + Date.now();
+  const card = document.createElement('div');
+  card.className = 'llm-card'; card.id = id;
+  card.innerHTML = `
+    <div class="llm-card-hdr">
+      <span class="llm-model-tag">🤖 ${escHtml(model)}</span>
+      <span class="llm-ms">thinking…</span>
+    </div>
+    <div class="llm-body"><div class="thinking"><div class="thinking-dots"><span></span><span></span><span></span></div> Generating response…</div></div>
+  `;
+  appendChat(card);
+  return id;
+}
+
+function finalizeLLMBubble(id, data) {
+  const card = document.getElementById(id);
+  if (!card) return;
+  const outScan = data.output_scan;
+  const allOutValid = !outScan || outScan.output_results?.every(r => r.is_valid);
+  const outStatusCls = !outScan ? '' : (data.blocked_stage === 'output' ? 'status-blocked' : (allOutValid ? 'status-ok' : 'status-warn'));
+  const outStatusTxt = !outScan ? '' : (data.blocked_stage === 'output' ? '🚫 BLOCKED' : (allOutValid ? '✓ PASS' : '⚠ FLAGS'));
+
+  if (!data.llm_response) {
+    card.innerHTML = `
+      <div class="llm-card-hdr"><span class="llm-model-tag">🤖 ${escHtml(data.model)}</span><span class="llm-ms" style="color:var(--red)">error</span></div>
+      <div class="llm-body" style="color:var(--red)">Failed to get LLM response. Check that Ollama is running and the model is available.</div>
+    `;
+    return;
+  }
+
+  card.innerHTML = `
+    <div class="llm-card-hdr">
+      <span class="llm-model-tag">🤖 ${escHtml(data.model)}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${outStatusTxt ? `<span class="msg-status ${outStatusCls}" style="font-size:11px">${outStatusTxt}</span>` : ''}
+        <span class="llm-ms">${data.llm_ms}ms</span>
+      </div>
+    </div>
+    <div class="llm-body">${escHtml(data.llm_response)}</div>
+    ${outScan ? buildMiniTags(outScan.output_results || []) : ''}
+    ${outScan ? `<div class="mode-banner"><span>⏱ Output scan</span><span>${outScan.scan_duration_ms}ms · LLM ${data.llm_ms}ms</span></div>` : `<div class="mode-banner"><span>⏱ LLM response</span><span>${data.llm_ms}ms</span></div>`}
+  `;
+}
+
+function buildMiniTags(results) {
+  if (!results || results.length === 0) return '';
+  const tags = results.map(r => {
+    const cls = r.error ? 'err' : (r.is_valid ? 'pass' : 'fail');
+    return `<span class="scan-tag ${cls}">${escHtml(r.scanner)}</span>`;
+  }).join('');
+  return `<div class="scan-tags">${tags}</div>`;
+}
+
+function appendChat(el) {
+  const area = document.getElementById('chatArea');
+  area.appendChild(el);
+  area.scrollTop = area.scrollHeight;
+}
+
+// ── RENDER RESULTS PANEL ─────────────────────────────────────────────────────
+function renderResults(inputScan, outputScan, chatData) {
+  const scroll = document.getElementById('resultsScroll');
+  scroll.innerHTML = '';
+
+  if (inputScan?.blocked || (chatData && chatData.blocked_stage === 'input')) {
+    const b = document.createElement('div'); b.className = 'blocked-banner';
+    b.innerHTML = '🚫 <span>Input BLOCKED — pipeline stopped.</span>'; scroll.appendChild(b);
+  }
+
+  if (inputScan && inputScan.input_results?.length > 0) {
+    scroll.appendChild(buildResultBlock('📨 Input Scan', inputScan.input_results, inputScan.overall_input_valid));
+  }
+
+  if (inputScan && inputScan.sanitized_input && inputScan.sanitized_input !== inputScan.original_message) {
+    scroll.appendChild(buildDiffBlock(inputScan.original_message, inputScan.sanitized_input));
+  }
+
+  if (chatData?.llm_response) {
+    const llmCard = document.createElement('div'); llmCard.className = 'res-block';
+    llmCard.innerHTML = `<div class="res-block-hdr"><span>🤖 LLM Response</span><span class="res-meta-ms">${chatData.llm_ms}ms</span></div>`;
+    const llmBody = document.createElement('div');
+    llmBody.style.cssText = 'padding:8px 12px;font-size:12px;line-height:1.6;color:var(--text2);white-space:pre-wrap;max-height:120px;overflow-y:auto';
+    llmBody.textContent = chatData.llm_response;
+    llmCard.appendChild(llmBody);
+    scroll.appendChild(llmCard);
+  }
+
+  if (outputScan && outputScan.output_results?.length > 0) {
+    scroll.appendChild(buildResultBlock('📤 Output Scan', outputScan.output_results, outputScan.overall_output_valid));
+  }
+
+  if (outputScan?.blocked || (chatData && chatData.blocked_stage === 'output')) {
+    const b = document.createElement('div'); b.className = 'blocked-banner';
+    b.innerHTML = '🚫 <span>Output BLOCKED by scanner.</span>'; scroll.appendChild(b);
+  }
+
+  // Meta/timing
+  const totalMs = chatData
+    ? ((inputScan?.scan_duration_ms || 0) + (chatData.llm_ms || 0) + (outputScan?.scan_duration_ms || 0)).toFixed(1)
+    : (inputScan?.scan_duration_ms || 0);
+  const meta = document.createElement('div'); meta.className = 'res-block';
+  meta.innerHTML = `<div class="res-meta"><span>Total pipeline</span><span class="res-meta-ms">${totalMs}ms</span></div>`;
+  scroll.appendChild(meta);
+
+  // Raw JSON
+  const rawData = chatData || inputScan;
+  if (rawData) {
+    const jb = document.createElement('div'); jb.className = 'res-block';
+    jb.innerHTML = `<div class="res-block-hdr"><span>Raw JSON</span><button class="json-btn" onclick="toggleJson(this)">{ } Show</button></div><pre class="json-view">${escHtml(JSON.stringify(rawData, null, 2))}</pre>`;
+    scroll.appendChild(jb);
+  }
+
+  document.getElementById('globalJsonBtn').style.display = 'block';
+  scroll.scrollTop = 0;
+}
+
+function buildResultBlock(title, results, overallValid) {
+  const block = document.createElement('div'); block.className = 'res-block';
+  const badgeCls = results.length === 0 ? 'na' : (overallValid ? 'pass' : 'fail');
+  const badgeTxt = results.length === 0 ? 'N/A' : (overallValid ? '✓ PASS' : '✗ FAIL');
+  const hdr = document.createElement('div'); hdr.className = 'res-block-hdr';
+  hdr.innerHTML = `<span>${title}</span><span class="overall-badge ${badgeCls}">${badgeTxt}</span>`;
+  block.appendChild(hdr);
+
+  const tbl = document.createElement('table'); tbl.className = 'res-table';
+  results.forEach(r => {
+    const tr = document.createElement('tr'); tr.className = 'res-row';
+    const sc = r.risk_score < 0.3 ? 'fill-g' : r.risk_score < 0.6 ? 'fill-y' : 'fill-r';
+    const icon = r.error ? '⚠' : (r.is_valid ? '✅' : '❌');
+    const lat = r.latency_ms != null ? `<span class="res-latency">${r.latency_ms}ms</span>` : '';
+    tr.innerHTML = `
+      <td>
+        <div class="res-scanner-name">${icon} ${escHtml(r.scanner)}${lat}</div>
+        <div class="score-bar-wrap">
+          <div class="score-bar"><div class="score-fill ${sc}" style="width:${Math.round(r.risk_score*100)}%"></div></div>
+          <span class="score-num">${r.risk_score.toFixed(3)}</span>
+        </div>
+      </td>
+      <td>
+        ${r.error ? `<div class="res-error">⚠ ${escHtml(r.error)}</div>` : `<div class="res-detail">${escHtml(r.details||'')}</div>`}
+        ${r.sanitized_text ? `<div class="res-sanitized">→ sanitized</div>` : ''}
+      </td>
+    `;
+    tbl.appendChild(tr);
+  });
+  block.appendChild(tbl);
+  return block;
+}
+
+function buildDiffBlock(orig, san) {
+  const b = document.createElement('div'); b.className = 'res-block';
+  b.innerHTML = `<div class="res-block-hdr"><span>✏ Sanitized Text</span></div>
+  <div class="diff-card">
+    <div class="diff-row minus"><span class="diff-sym">−</span><span>${escHtml(orig)}</span></div>
+    <div class="diff-row plus"><span class="diff-sym">+</span><span>${escHtml(san)}</span></div>
+  </div>`;
+  return b;
+}
+
+function toggleJson(btn) {
+  const v = btn.closest('.res-block').querySelector('.json-view');
+  const on = v.classList.toggle('show');
+  btn.textContent = on ? '{ } Hide' : '{ } Show';
+}
+function toggleAllJson() {
+  document.querySelectorAll('.json-view').forEach(v => v.classList.toggle('show'));
+}
+
+function clearChat() {
+  document.getElementById('chatArea').innerHTML = `
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🛡</div>
+      <div class="empty-title">LLM-Guard Playground</div>
+      <div class="empty-sub">Select scanners on the left, pick an Ollama model in the header, and start analyzing prompts.</div>
+    </div>`;
+  document.getElementById('resultsScroll').innerHTML = `<div class="results-empty"><div class="results-empty-icon">📋</div><div style="font-size:11px;color:var(--text3)">Results appear here after analysis</div></div>`;
+  document.getElementById('globalJsonBtn').style.display = 'none';
+  lastResult = null;
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const res = await fetch('/stats');
+    const s = await res.json();
+    renderStats(s);
+  } catch {}
+}
+async function resetStats() {
+  await fetch('/stats/clear', { method: 'POST' });
+  renderStats(null);
+}
+
+function renderStats(s) {
+  const empty = document.getElementById('statsEmpty');
+  if (!s || s.total_requests === 0) {
+    empty.style.display = 'block';
+    ['cardSummary','cardHist','cardScanner'].forEach(id => document.getElementById(id).style.display = 'none');
+    renderSysInfo(s?.system, null);
+    return;
+  }
+  empty.style.display = 'none';
+
+  document.getElementById('cardSummary').style.display = 'block';
+  document.getElementById('sTotal').textContent = s.total_requests;
+  document.getElementById('sAvg').textContent = s.avg_total_ms + 'ms';
+  document.getElementById('sMin').textContent = s.min_total_ms + 'ms';
+  document.getElementById('sMax').textContent = s.max_total_ms + 'ms';
+  const avgEl = document.getElementById('sAvg');
+  avgEl.className = 'stat-val ms-' + msClass(s.avg_total_ms);
+
+  // Latency trend chart removed
+
+  document.getElementById('cardHist').style.display = 'block';
+  renderReqHist(s.recent_requests, s.max_total_ms);
+
+  document.getElementById('cardScanner').style.display = 'block';
+  const tbody = document.getElementById('scannerStatBody');
+  tbody.innerHTML = '';
+  s.scanner_stats.forEach(sc => {
+    const tr = document.createElement('tr');
+    const failCls = sc.failure_rate > 0 ? 'fail-r' : '';
+    tr.innerHTML = `
+      <td style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="type-pin ${sc.type === 'input' ? 'in' : 'out'}">${sc.type === 'input' ? 'IN' : 'OUT'}</span>${escHtml(sc.scanner)}</td>
+      <td><span class="ms-${msClass(sc.avg_ms)}">${sc.avg_ms}ms</span></td>
+      <td style="color:var(--text2)">${sc.max_ms}ms</td>
+      <td>${sc.calls}</td>
+      <td><span class="${failCls}">${sc.failure_rate}%</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  renderSysInfo(s.system, s.cache_size);
+}
+
+function renderSysInfo(sys, cacheSize) {
+  const grid = document.getElementById('sysinfoGrid');
+  if (!sys) { grid.innerHTML = '<div class="sysinfo-row"><span class="si-key">Loading…</span></div>'; return; }
+  const rows = [
+    ['Inference',  sys.inference_device, sys.inference_device !== 'CPU' ? 'accent' : ''],
+    ['Device',     truncate(sys.device_detail, 26), ''],
+    ['CPU Cores',  `${sys.cpu_cores_physical}P / ${sys.cpu_cores_logical}L`, ''],
+    ['CPU Freq',   sys.cpu_freq_ghz ? `${sys.cpu_freq_ghz}GHz (max ${sys.cpu_freq_max_ghz})` : 'N/A', ''],
+    ['CPU Usage',  sys.cpu_usage_pct != null ? sys.cpu_usage_pct + '%' : 'N/A', sys.cpu_usage_pct > 80 ? 'r' : (sys.cpu_usage_pct > 50 ? '' : 'g')],
+    ['RAM Total',  sys.ram_total_gb ? sys.ram_total_gb + ' GB' : 'N/A', ''],
+    ['RAM Used',   sys.ram_used_pct != null ? sys.ram_used_pct + '%' : 'N/A', sys.ram_used_pct > 85 ? 'r' : ''],
+    ['OS',         sys.os, ''],
+    ['Python',     sys.python, ''],
+    ['Cached',     cacheSize != null ? cacheSize + ' models' : '—', cacheSize > 0 ? 'g' : ''],
+  ];
+  grid.innerHTML = rows.map(([k, v, c]) =>
+    `<div class="sysinfo-row"><span class="si-key">${escHtml(k)}</span><span class="si-val ${c||''}">${escHtml(String(v??'N/A'))}</span></div>`
+  ).join('');
+}
+
+function renderReqHist(reqs, maxMs) {
+  const list = document.getElementById('reqHistList');
+  list.innerHTML = '';
+  [...reqs].reverse().forEach((r, i) => {
+    const pct = Math.round((r.total_ms / Math.max(maxMs, 1)) * 100);
+    const allOk = r.scanners.every(s => s.valid);
+    const div = document.createElement('div'); div.className = 'req-hist-item';
+    div.title = `#${r.id}: ${r.total_ms}ms · input ${r.input_ms}ms / output ${r.output_ms}ms · ${r.message_len} chars`;
+    div.innerHTML = `<span class="req-id">#${r.id}</span><div class="req-bar-w"><div class="req-bar-f ${r.blocked?'blocked':''}" style="width:${pct}%"></div></div><span class="req-ms">${r.total_ms}ms</span><span class="req-ico">${r.blocked?'🚫':allOk?'✅':'⚠'}</span>`;
+    list.appendChild(div);
+  });
+}
+
+function renderChart(reqs) {
+  const canvas = document.getElementById('latencyCanvas');
+  if (!canvas || !reqs || reqs.length < 2) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth || 270; const H = 56;
+  canvas.width = W * dpr; canvas.height = H * dpr; ctx.scale(dpr, dpr);
+  const vals = reqs.map(r => r.total_ms);
+  const maxV = Math.max(...vals, 1); const n = vals.length; const padX = 6;
+  const iW = W - padX * 2;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+  ctx.lineWidth = 1;
+  [0.25,0.5,0.75].forEach(f => { const y = H - H*f; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); });
+  const xOf = i => padX + (i/(n-1))*iW;
+  const yOf = v => H - 4 - (v/maxV)*(H-8);
+  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0, accentColor + '44'); grad.addColorStop(1, accentColor + '00');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.moveTo(xOf(0),H); ctx.lineTo(xOf(0),yOf(vals[0]));
+  for (let i=1;i<n;i++){const cx=(xOf(i-1)+xOf(i))/2; ctx.bezierCurveTo(cx,yOf(vals[i-1]),cx,yOf(vals[i]),xOf(i),yOf(vals[i]));}
+  ctx.lineTo(xOf(n-1),H); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = accentColor; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(xOf(0),yOf(vals[0]));
+  for (let i=1;i<n;i++){const cx=(xOf(i-1)+xOf(i))/2; ctx.bezierCurveTo(cx,yOf(vals[i-1]),cx,yOf(vals[i]),xOf(i),yOf(vals[i]));}
+  ctx.stroke();
+  ctx.fillStyle = accentColor; ctx.beginPath(); ctx.arc(xOf(n-1),yOf(vals[n-1]),3.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text3').trim();
+  ctx.font = '9px JetBrains Mono, monospace'; ctx.textAlign = 'right';
+  ctx.fillText(Math.round(maxV)+'ms', W-2, 11);
+  document.getElementById('chartLegend').textContent = 'latest: ' + vals[n-1] + 'ms';
+}
+
+function msClass(ms) {
+  if (ms < 50)   return 'fast';
+  if (ms < 300)  return 'medium';
+  if (ms < 1000) return 'slow';
+  return 'vslow';
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function truncate(s, n) { return !s ? '' : s.length > n ? s.slice(0,n)+'…' : s; }
+function showTip(e, txt) {
+  const t = document.getElementById('tooltip'); t.textContent = txt;
+  t.style.left = (e.clientX+12)+'px'; t.style.top = (e.clientY+8)+'px'; t.classList.add('show');
+}
+function hideTip() { document.getElementById('tooltip').classList.remove('show'); }
+function showLoading(sub) { document.getElementById('loadSub').textContent = sub; document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+
+const msgInput = document.getElementById('msgInput');
+msgInput.addEventListener('input', () => document.getElementById('charCount').textContent = msgInput.value.length + ' chars');
+msgInput.addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Enter') { e.preventDefault(); handleSend(); } });
+
+// ── START ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
